@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+			    http://www.springframework.org/schema/beans/spring-beans.xsd
+			    http://www.springframework.org/schema/context
+			    http://www.springframework.org/schema/context/spring-context.xsd
+			    http://www.springframework.org/schema/aop
+			    http://www.springframework.org/schema/aop/spring-aop.xsd
+			    http://www.springframework.org/schema/tx
+			    http://www.springframework.org/schema/tx/spring-tx.xsd
+			    http://www.springframework.org/schema/security
+			    http://www.springframework.org/schema/security/spring-security.xsd">
+
+    <!--  直接释放无需经过SpringSecurity过滤器的静态资源  -->
+    <security:http pattern="/css/**" security="none"/>
+    <security:http pattern="/img/**" security="none"/>
+    <security:http pattern="/plugins/**" security="none"/>
+    <security:http pattern="/failer.jsp" security="none"/>
+    <security:http pattern="/favicon.ico" security="none"/>
+
+    <!--  设置可以用spring的el表达式配置SpringSecurity并自动生成对应配置组件（过滤器  -->
+    <security:http auto-config="true" use-expressions="true">
+        <!-- 指定login.jsp页面可以匿名访问 -->
+        <security:intercept-url pattern="/login.jsp" access="permitAll()"/>
+        <!--使用spring的el表达式来指定项目所有资源访问都必须有ROLE_USER或ROLE_ADMIN角色-->
+        <security:intercept-url pattern="/**" access="hasAnyRole('ROLE_USER','ROLE_ADMIN')"/>
+        <!-- 指定自定义认证页面 -->
+        <security:form-login login-page="/login.jsp"
+                             login-processing-url="/login"
+                             default-target-url="/index.jsp"
+                             authentication-failure-url="/failer.jsp"/>
+        <!--  指定退出登录后跳转的页面 -->
+        <security:logout logout-url="/logout"
+                         logout-success-url="/login.jsp"/>
+        <!-- 禁用csrf防护机制 -->
+        <security:csrf disabled="true"/>
+        <!--开启rememberme过滤器，持久化remember-me信息,设置token存储时间为60秒-->
+        <security:remember-me
+                data-source-ref="dataSource"
+                remember-me-parameter="remember-me"
+                token-validity-seconds="60"/>
+        <!-- 403异常处理 不好用，只能处理403异常-->
+<!--        <security:access-denied-handler error-page="/403.jsp"/>-->
+    </security:http>
+
+    <!-- Bcrypt密码加密 -->
+    <bean id="passwordEncoder" class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder"></bean>
+
+    <!--设置SpringSecurity认证用户信息的来源-->
+    <security:authentication-manager>
+        <security:authentication-provider user-service-ref="userServiceImpl">
+            <!-- 指定认证使用的加密对象 -->
+            <security:password-encoder ref="passwordEncoder"/>
+        </security:authentication-provider>
+        <!-- <security:authentication-provider>
+             <security:user-service>
+                 <security:user name="user" password="{noop}user"
+                                authorities="ROLE_USER"></security:user>
+                 <security:user name="admin" password="admin"
+                                authorities="ROLE_USER"></security:user>
+             </security:user-service>
+         </security:authentication-provider>-->
+    </security:authentication-manager>
+</beans>
